@@ -41,6 +41,7 @@ spring.datasource.hikari.connection-test-query=select 1;
 * should we cover this? JDBI maybe benefits from it? worth mentioning?
 
 ## AbstractRoutingDataSource
-
-
 * you don't want to test the ARDS for its health as it is in fact a composite, so we have `management.health.db.ignore-routing-data-sources=(true|false)`
+
+## LazyConnectionDataSourceProxy
+* 
