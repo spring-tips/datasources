@@ -5,7 +5,9 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.autoconfigure.jdbc.JdbcConnectionDetails;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,38 +35,6 @@ public class DatasourcesApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(DatasourcesApplication.class, args);
-	}
-
-}
-
-
-@Profile("debug")
-@Configuration
-class DefaultDataSourceConfigurationRunners {
-
-
-	static class DataSourceEnumeratingApplicationRunner implements ApplicationRunner {
-
-		private final Map<String, DataSource> dataSourceMap;
-
-		DataSourceEnumeratingApplicationRunner(Map<String, DataSource> dataSourceMap) {
-			this.dataSourceMap = dataSourceMap;
-		}
-
-		@Override
-		public void run(ApplicationArguments args) throws Exception {
-			Assert.state(!this.dataSourceMap.isEmpty(),
-					"there should be at least one " + DataSource.class.getName());
-			for (var k : this.dataSourceMap.keySet())
-				System.out.println(k + '=' + this.dataSourceMap.get(k));
-
-		}
-	}
-
-	@Bean
-	DataSourceEnumeratingApplicationRunner dataSourceEnumeratingApplicationRunner(
-			Map<String, DataSource> dataSourceMap) {
-		return new DataSourceEnumeratingApplicationRunner(dataSourceMap);
 	}
 
 }
@@ -111,12 +81,14 @@ class DriversAndDataSourceConfiguration {
 class JavaDataSourceConfiguration {
 
 
+	private final ClassLoader classLoader = ClassLoader.getPlatformClassLoader();
+
 	@Bean
 	DriverManagerDataSource dataSource() {
 		return new DriverManagerDataSource("jdbc:h2:mem:springtips");
 	}
 
-	// todo mention things like spring batch's `@BatchDataSource`
+	// todo spring batch's `@BatchDataSource`
 	@Primary
 	@Bean
 	DataSource embeddedDataSource() {
@@ -127,9 +99,8 @@ class JavaDataSourceConfiguration {
 
 	@Bean
 	HikariDataSource hikariDataSource(JdbcConnectionDetails connectionDetails) {
-		var classloader = getClass().getClassLoader();
 		return DataSourceBuilder
-				.create(classloader)
+				.create(this.classLoader)
 				.type(com.zaxxer.hikari.HikariDataSource.class)
 				.driverClassName(connectionDetails.getDriverClassName())
 				.url(connectionDetails.getJdbcUrl())
@@ -138,6 +109,51 @@ class JavaDataSourceConfiguration {
 				.build();
 	}
 
+
+}
+
+@Configuration
+@Profile("configprops")
+class ConfigurationPropertiesConfiguration {
+
+	private static DataSource dataSource(DataSourceProperties dsp) {
+		return DataSourceBuilder
+				.create(ClassLoader.getSystemClassLoader())
+				.url(dsp.determineUrl())
+				.username(dsp.getUsername())
+				.password(dsp.getPassword())
+				.type(HikariDataSource.class)
+				.driverClassName(org.postgresql.Driver.class.getName())
+				.build();
+	}
+
+	@Bean
+	@ConfigurationProperties(prefix = "apac")
+	DataSourceProperties apacDataSourceProperties() {
+		return new DataSourceProperties();
+	}
+
+	@Bean
+	@ConfigurationProperties(prefix = "emea")
+	DataSourceProperties emeaDataSourceProperties() {
+		return new DataSourceProperties();
+	}
+
+	@Bean
+	DataSource emeaDataSource(DataSourceProperties emeaDataSourceProperties) {
+		return dataSource(emeaDataSourceProperties);
+	}
+
+	@Bean
+	DataSource apacDataSource(DataSourceProperties apacDataSourceProperties) {
+		return dataSource(apacDataSourceProperties);
+	}
+
+	@Bean
+	ApplicationRunner dataSourceConfigurationPropertiesRunner(Map<String, DataSource> dataSourceMap) {
+		return args -> dataSourceMap
+				.forEach((key, db) -> System.out.println(key + '=' + JdbcClient.create(db).sql("select 1").query(Integer.class).single()));
+	}
 
 }
 
