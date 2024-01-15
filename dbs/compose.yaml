@@ -1,17 +1,18 @@
 services:
-  apac:
+
+  emea:
     image: 'postgres:latest'
     environment:
-      - 'POSTGRES_DB=apac'
+      - 'POSTGRES_DB=mydatabase'
       - 'POSTGRES_PASSWORD=secret'
       - 'POSTGRES_USER=myuser'
     ports:
       - '5434:5432'
 
-  emea:
+  apac:
     image: 'postgres:latest'
     environment:
-      - 'POSTGRES_DB=emea'
+      - 'POSTGRES_DB=mydatabase'
       - 'POSTGRES_PASSWORD=secret'
       - 'POSTGRES_USER=myuser'
     ports:

@@ -1,10 +1,10 @@
-package bootiful.datasources;
+package com.example.dbs;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class DatasourcesApplicationTests {
+class DbsApplicationTests {
 
 	@Test
 	void contextLoads() {
